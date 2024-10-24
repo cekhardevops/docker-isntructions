@@ -1,0 +1,105 @@
+pull the image from docker hub
+-----------------------
+
+docker pull <image-name>:version
+ex: docker pull nginx:latest
+docker pull nginx:alpine-slim
+
+create container from image
+---------------------------
+
+docker create <image-name>:version  => return container ID
+docker create <image-id>
+
+ex:
+	docker create nginx:alpine-slim
+	72f7d9a37dcca4c71db1ea958a4466e733baee630deeb22237d02f3310994ac1
+
+list the running containers && stopped/created containers
+-------------------------------
+docker ps 
+docker ps -a 
+
+run the container
+--------------------------
+
+docker run <container-id>
+
+ex:
+	docker run 72f7d9a37dcca4c71db1ea958a4466e733baee630deeb22237d02f3310994ac1
+	
+
+stop the container
+----------------------------------
+docker stop <container-id>
+
+ex:
+	docker stop 72f7d9a37
+	
+
+remove the non-running container
+======================================
+
+docker rm <container-id>
+
+ex:
+	docker rm -f 72f7d9a37
+
+remove the running container
+===================================
+
+docker rm -f <container-id>
+
+ex:
+	docker rm -f 72f7d9a37
+	
+
+remove all the containers (running and stopped/created containers)
+=======================================
+
+docker rm -f `docker ps -aq`
+
+to login to the running container
+=======================
+
+docker exec -it <container-id> bash/sh (depends on base os)
+
+to check the logs of the container
+====================================
+
+docker logs -f <container-id>
+
+to inspect  the container
+==========================
+
+docker inspect <container-id>
+
+name the container
+------------------
+
+docker run -d --name nginx-custom-name nginx:latest
+
+Dockerfile
+=====================
+used to build the custom image. we can make use of docker instrunctions to build custom images
+
+FROM RUN CMD LEBEL EXPOSE COPY ADD ENV ARG ENTRYPOINT WORKDIR USER
+
+FROM:
+------------
+
+FROM is the first instrunction in Dockerfile it represents base os. there is exception for ARG.
+
+FROM <base-os>
+
+once push the Dockerfile to git, pull it to the host and run the command to build the image
+
+docker build -t <image-name>:version .  
+
+docker build -t from:v1 . (.) reprensents Dockerfile is available at current directory.
+
+RUN:
+===========
+RUN instrunction is used to configure the image like installing package etc... RUN instruciton will execute at the time of image building
+
+
