@@ -1,4 +1,8 @@
-FROM almalinux:9
+# ARG key value pairs only avaible at image build time. env pairs are avilable at both build image and container creation time
+ARG course="Devops" \
+    duration="120 Hrs" \
+    version=9
+FROM almalinux:$version
 ARG course="Devops" \
     duration="120 Hrs"
 ENV course-env="Devops" \
