@@ -3,8 +3,6 @@ ARG course="Devops" \
     duration="120 Hrs" \
     version=9
 FROM almalinux:$version
-ARG course="Devops" \
-    duration="120 Hrs"
 ENV course-env="Devops" \
     author="siva" \
     duration-env="120 Hrs"
