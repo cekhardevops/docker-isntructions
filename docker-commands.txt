@@ -100,6 +100,127 @@ docker build -t from:v1 . (.) reprensents Dockerfile is available at current dir
 
 RUN:
 ===========
-RUN instrunction is used to configure the image like installing package etc... RUN instruciton will execute at the time of image building
+RUN instrunction is used to configure the image like installing package etc... 
+RUN instruciton will be executed at the time of image building
 
 
+CMD
+=====
+CMD instrunction is used to run the container. CMD will be executed at the time of container creation time.
+
+Systemctl start nginx --> /etc/systemd/system/nginx.service  (symlink) 
+
+in nginx.service file, we can find actual command to run the service infinite time
+
+
+LABEL
+-----
+
+docker images -f 'label=key=value'
+docker inspect will give us whole data about image. we can find the label in json
+
+EXPOSE
+======
+
+it doesn’t open port on container but it will give the metadata/information about on what port container is running
+
+ENV
+=====
+
+it adds the environment vaiables at the time of image builing and container creation time.
+
+ENV course="devops" \
+	trainer="siva" \
+	duration="130Hrs"
+
+COPY:
+================
+it will copy the files from source directory to image.
+
+ADD:
+==========
+
+it will do exactly same as COPY instrunction but it has two extra capabilites 1) download files from internet 2) untar the tar files when download.
+
+
+--------------------------------------------------------------------------
+
+
+
+Using systemctl to manage Nginx is common on systems that use systemd as the init system, such as many modern Linux distributions (like Ubuntu, CentOS, and Fedora). However, when running Nginx in a Docker container, using systemctl to manage Nginx is not practical, and that’s why the command nginx -g "daemon off;" is preferred.
+
+Let’s break down why:
+
+1. Systemctl is for Host-Based Service Management:
+systemctl is a tool for controlling systemd services on the host machine (e.g., starting, stopping, and managing services like Nginx, Apache, etc.).
+systemd is the init system on many Linux distributions responsible for managing system services. It is designed to work with the entire operating system on the host, managing things like boot processes, logging, and service dependencies.
+Inside a Docker container, there is usually no systemd or init system running. Containers are meant to be lightweight, often running a single process directly, so there is no need for a full-fledged service manager like systemd.
+
+2. Single Process in Containers:
+Docker containers are designed to run one primary process (for example, the Nginx web server). The idea is to keep containers as lightweight as possible, without the overhead of a full init system like systemd.
+In a container, Nginx itself is typically the main process, and you want it to run in the foreground so that Docker can manage it directly.
+If Nginx runs as a background (daemon) process, Docker might think the container has stopped because it won't be aware of the background process, which could lead to undesired behavior.
+
+3. Nginx Daemon Mode vs Foreground Mode:
+By default, Nginx runs as a daemon (background process). When you start Nginx normally, it forks into the background, and systemd (or systemctl) monitors it.
+In Docker containers, however, it's important for the main process to stay in the foreground because Docker manages containers by monitoring the lifecycle of the main process. If Nginx daemonizes (runs in the background), Docker won’t know it's still running, and the container could exit.
+This is why the command nginx -g "daemon off;" is used. The -g "daemon off;" option ensures that:
+
+Nginx does not daemonize (i.e., it runs in the foreground).
+Docker can monitor Nginx properly as the main process of the container.
+
+4. Docker Best Practices:
+When running a service like Nginx in Docker, it's important to run it in the foreground, so Docker can properly manage the container’s lifecycle.
+If you run nginx with systemctl, it won't work inside the container because the container does not run systemd, and you’ll run into issues because systemctl is designed for a system with systemd, not for container environments.
+Summary of Why nginx -g "daemon off;":
+Foreground Process: Nginx stays in the foreground, allowing Docker to properly manage the container's lifecycle.
+Lightweight Containers: Containers don’t typically run a full init system like systemd, so systemctl won’t work as it does on a full Linux OS.
+Single Process: Docker’s design encourages running a single main process per container, and keeping it in the foreground is crucial for Docker to manage it.
+Therefore, inside Docker containers, we use nginx -g "daemon off;" to keep Nginx running as the primary and foreground process, making it compatible with Docker’s process management model.
+
+
+how would docker manages if it runs in the foreground ? what is the logic behind that
+
+ChatGPT said:
+ChatGPT
+When Docker runs a container, it directly manages the main process inside the container. This is central to Docker's design and how it handles the lifecycle of containers. If the process runs in the foreground, Docker can effectively monitor and manage it. Here's the logic behind Docker managing a foreground process:
+
+How Docker Manages a Foreground Process:
+Main Process Monitoring:
+
+Docker is built around the idea of running one main process per container. When you start a container, Docker starts the main process inside it. In the case of running Nginx with nginx -g "daemon off;", Nginx runs in the foreground.
+Docker attaches to the main process (in this case, Nginx in the foreground) and monitors its state. Docker keeps the container running as long as the main process is running.
+Process Lifecycle and Container Lifecycle:
+
+The lifecycle of the container is tied to the lifecycle of the main process running inside it. If the main process stops (either it exits normally, crashes, or is terminated), the container also stops.
+Docker knows when the process starts and when it ends. As soon as the main process exits, Docker considers the container to have finished its job and will stop the container.
+Foreground Process Behavior:
+
+When a process runs in the foreground, it continuously occupies the terminal or the environment it is running in (in this case, the container environment).
+If you run nginx -g "daemon off;", Nginx doesn’t fork into the background. Instead, it runs as the main foreground process, and Docker can monitor it.
+Since Docker expects one main process, the fact that Nginx stays in the foreground means Docker can:
+Track the process status (running or stopped).
+Capture logs from stdout and stderr.
+Handle restarts if you configure Docker to automatically restart the container on failure.
+Docker Daemon Logic:
+
+The Docker daemon (the Docker service that manages containers) starts the container and the main process inside it. It keeps track of the process ID (PID) of the main process.
+If the process crashes or terminates, Docker detects this immediately because the PID is no longer running. Docker will then stop the container or attempt a restart if configured to do so.
+Why the Foreground Process is Important:
+In Docker, the container is meant to be lightweight and purpose-driven. The foreground process:
+
+Represents the purpose of the container: Containers are typically designed to run a single service (e.g., Nginx, MySQL, etc.), and the foreground process reflects the service.
+Simplifies resource management: By keeping the process in the foreground, Docker can allocate resources (CPU, memory) to that process and track resource usage in real time.
+Ensures proper cleanup: When the main process exits, Docker automatically performs cleanup tasks, such as deallocating resources or removing the container if it was run in an ephemeral mode (--rm).
+What Happens if the Process Runs in the Background:
+If the main process (like Nginx) daemonizes or runs in the background, several issues arise:
+
+Process Management Breakdown: Docker only monitors the main process it started. If that process forks into the background and exits, Docker assumes the container's job is finished and stops the container.
+Container Stops Prematurely: When the main process exits (because it daemonized), Docker believes the container has no more work to do, and the container will stop, even if the background service (Nginx) is still running.
+Lack of Logging and Monitoring: Since Docker attaches to the stdout and stderr of the main process, running it in the background would prevent Docker from capturing the logs and managing the process properly.
+Summary of Logic:
+Foreground Process: Docker can directly monitor, manage, and control the process.
+Lifecycle Tied to Process: If the process exits, Docker stops the container.
+Logging and Resource Management: Docker captures logs and tracks resource usage as long as the process is running in the foreground.
+Background Process: If the process daemonizes (runs in the background), Docker cannot manage or track it properly, and the container may stop prematurely.
+In short, Docker relies on the main process running in the foreground to effectively manage the container's lifecycle. This is why processes like Nginx are run in the foreground inside containers (using nginx -g "daemon off;"), so Docker can keep the container alive as long as the service is running.
